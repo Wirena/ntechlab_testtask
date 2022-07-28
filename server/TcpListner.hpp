@@ -1,18 +1,19 @@
-#ifndef NTECHLAB_TESTTASK_TCPLISTNER_H
-#define NTECHLAB_TESTTASK_TCPLISTNER_H
+#ifndef NTECHLAB_TESTTASK_TCPLISTNER_HPP
+#define NTECHLAB_TESTTASK_TCPLISTNER_HPP
 #include <boost/asio.hpp>
 #include <iostream>
 
+template<class Connection>
 class TcpListner {
     using tcp = boost::asio::ip::tcp;
     using error_code = boost::system::error_code;
+    using ConnectionType = std::shared_ptr<Connection>;
 
     boost::asio::io_context &ioc;
     tcp::acceptor acceptor;
 
     void accept();
     void onAccept(error_code ec, tcp::socket socket);
-
 public:
     explicit TcpListner(boost::asio::io_context &ioc) : acceptor(ioc), ioc(ioc) {}
 
@@ -21,4 +22,4 @@ public:
 };
 
 
-#endif//NTECHLAB_TESTTASK_TCPLISTNER_H
+#endif//NTECHLAB_TESTTASK_TCPLISTNER_HPP

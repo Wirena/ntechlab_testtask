@@ -27,6 +27,28 @@
 *.lib
 
 # Executables
+cmake-build-*
 *.exe
 *.out
 *.app
+
+# Idea files
+.idea
+
+# Third party libraries
+third_party
+
+
+
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+*.cbp

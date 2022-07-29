@@ -8,10 +8,10 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <unordered_map>
 
 
 class HTTPConnection : public std::enable_shared_from_this<HTTPConnection> {
+public:
     class WriteCallback {
         HTTPConnection &connection;
 
@@ -19,8 +19,10 @@ class HTTPConnection : public std::enable_shared_from_this<HTTPConnection> {
         explicit WriteCallback(HTTPConnection &connection) : connection(connection) {}
         template<bool isRequest, class Body, class Fields>
         void operator()(boost::beast::http::message<isRequest, Body, Fields> &&msg) const;
-    } writeCallback;
+    };
 
+private:
+    WriteCallback writeCallback;
     boost::beast::tcp_stream stream;
     boost::beast::flat_buffer buffer;
     boost::beast::http::request<boost::beast::http::buffer_body> request;
@@ -33,7 +35,7 @@ class HTTPConnection : public std::enable_shared_from_this<HTTPConnection> {
     void onWrite(bool close, boost::system::error_code err, std::size_t bytes_transferred);
 
 public:
-    using MuxFunction = std::function<void(boost::beast::http::request_parser<boost::beast::http::string_body> &&, HTTPConnection::WriteCallback)>;
+    using MuxFunction = std::function<void(boost::beast::http::message<true, boost::beast::http::string_body> &&, HTTPConnection::WriteCallback)>;
 
     explicit HTTPConnection(boost::asio::ip::tcp::socket &&socket, const MuxFunction &muxFunction) : stream(std::move(socket)),
                                                                                                      writeCallback(*this), muxFunction(muxFunction) {

@@ -31,12 +31,18 @@ void HTTPConnection::onRead(error_code err, std::size_t bytes_transferred) {
     if (err == http::error::end_of_stream)
         return close();
     if (err) return fail(err, "Async_read failed");
-    std::cout<<"onRead"<<std::endl;
-    if(parser.chunked()){
-        fail(error_code(), "Can't process chunked file");
+    if(parser.chunked()|| !parser.is_done()){
+        fail(error_code(), "Chunked request are not supported");
+        http::response<http::string_body> res{http::status::internal_server_error, parser.get().version()};
+        res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+        res.set(http::field::content_type, "text/html");
+        res.keep_alive(parser.keep_alive());
+        res.body() = "Chunked request are not supported";
+        res.prepare_payload();
+        writeCallback(std::move(res));
         return close();
     }
-    std::cout<<parser.get().body()<<std::endl;
+    muxFunction(parser.release(),writeCallback);
     //handle_request(std::move(request), writeCallback);
 }
 void HTTPConnection::close() {

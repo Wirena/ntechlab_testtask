@@ -1,5 +1,5 @@
-#ifndef NTECHLAB_TESTTASK_TCPLISTNER_HPP
-#define NTECHLAB_TESTTASK_TCPLISTNER_HPP
+#ifndef NTECHLAB_TESTTASK_TCPLISTENER_HPP
+#define NTECHLAB_TESTTASK_TCPLISTENER_HPP
 #include "fail.h"
 #include <boost/asio.hpp>
 #include <boost/asio/strand.hpp>
@@ -8,7 +8,7 @@
 
 
 template<class Connection>
-class TcpListner {
+class TcpListener {
     const typename Connection::MuxFunction &muxFunction;
     using tcp = boost::asio::ip::tcp;
     using error_code = boost::system::error_code;
@@ -19,17 +19,17 @@ class TcpListner {
     void onAccept(error_code ec, tcp::socket socket);
 
 public:
-    explicit TcpListner(boost::asio::io_context &ioc, const typename Connection::MuxFunction &muxFunction) : acceptor(ioc), ioc(ioc), muxFunction(muxFunction) {}
+    explicit TcpListener(boost::asio::io_context &ioc, const typename Connection::MuxFunction &muxFunction) : acceptor(ioc), ioc(ioc), muxFunction(muxFunction) {}
 
     [[nodiscard]] error_code bind(const tcp::endpoint &endpoint);
     [[nodiscard]] error_code listen();
     [[nodiscard]] error_code close();
-    ~TcpListner() { std::cout << "Exiting" << std::endl; }
+    ~TcpListener() { std::cout << "Exiting" << std::endl; }
 };
 
 
 template<class Connection>
-boost::system::error_code TcpListner<Connection>::bind(const tcp::endpoint &endpoint) {
+boost::system::error_code TcpListener<Connection>::bind(const tcp::endpoint &endpoint) {
     error_code err;
     acceptor.open(endpoint.protocol(), err);
     if (err) {
@@ -51,7 +51,7 @@ boost::system::error_code TcpListner<Connection>::bind(const tcp::endpoint &endp
 }
 
 template<class Connection>
-void TcpListner<Connection>::onAccept(error_code err, tcp::socket socket) {
+void TcpListener<Connection>::onAccept(error_code err, tcp::socket socket) {
     if (err) {
         fail(err, "Accept failed");
         return;
@@ -62,13 +62,13 @@ void TcpListner<Connection>::onAccept(error_code err, tcp::socket socket) {
 }
 
 template<class Connection>
-void TcpListner<Connection>::accept() {
+void TcpListener<Connection>::accept() {
     acceptor.async_accept(boost::asio::make_strand(ioc), boost::beast::bind_front_handler(
-                                                                 &TcpListner::onAccept, this));
+                                                                 &TcpListener::onAccept, this));
 }
 
 template<class Connection>
-boost::system::error_code TcpListner<Connection>::listen() {
+boost::system::error_code TcpListener<Connection>::listen() {
     error_code err;
     acceptor.listen(boost::asio::socket_base::max_listen_connections, err);
     if (err) {
@@ -80,7 +80,7 @@ boost::system::error_code TcpListner<Connection>::listen() {
 }
 
 template<class Connection>
-boost::system::error_code TcpListner<Connection>::close() {
+boost::system::error_code TcpListener<Connection>::close() {
     error_code err;
     acceptor.close(err);
     if (err)
@@ -89,4 +89,4 @@ boost::system::error_code TcpListner<Connection>::close() {
 }
 
 
-#endif//NTECHLAB_TESTTASK_TCPLISTNER_HPP
+#endif//NTECHLAB_TESTTASK_TCPLISTENER_HPP

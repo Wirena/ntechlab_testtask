@@ -4,11 +4,11 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(BOOST_INCLUDE_DIR ../third_party/boost/)
 
-add_executable(${PROJECT_NAME} main.cpp TcpListner.cpp TcpListner.h fail.h)
+add_executable(${PROJECT_NAME} main.cpp TcpListner.hpp fail.h HTTPConnection.cpp HTTPConnection.h HTTPServer.cpp HTTPServer.h)
 
 add_compile_definitions(BOOST_NO_EXCEPTIONS)
 
-target_compile_options(${PROJECT_NAME} PUBLIC -fno-exceptions )
+#target_compile_options(${PROJECT_NAME} PUBLIC -fno-exceptions )
 
 target_link_libraries(${PROJECT_NAME} pthread)
 

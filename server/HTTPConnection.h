@@ -17,8 +17,7 @@ public:
 
     public:
         explicit WriteCallback(HTTPConnection &connection) : connection(connection) {}
-        template<bool isRequest, class Body, class Fields>
-        void operator()(boost::beast::http::message<isRequest, Body, Fields> &&msg) const;
+        void operator()(boost::beast::http::response<boost::beast::http::string_body> &&msg) const;
     };
 
 private:

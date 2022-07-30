@@ -1,6 +1,7 @@
 #ifndef NTECHLAB_TESTTASK_HTTPSERVER_H
 #define NTECHLAB_TESTTASK_HTTPSERVER_H
 #include "HTTPConnection.h"
+#include "Responses.h"
 #include "TcpListener.hpp"
 #include <boost/asio.hpp>
 #include <boost/beast/http.hpp>
@@ -40,39 +41,51 @@ namespace std {
 }// namespace std
 
 
-using HandlerFunc = std::function<void(boost::beast::http::message<true, boost::beast::http::string_body>::value_type &&, HTTPConnection::WriteCallback)>;
+using HandlerFunc = std::function<void(boost::beast::http::message<true, boost::beast::http::string_body> &&, HTTPConnection::WriteCallback)>;
 using MuxMap = std::unordered_map<Endpoint, HandlerFunc>;
 
 
 class HTTPServer {
     using error_code = boost::system::error_code;
+    boost::asio::io_context ioc;
 
     std::unique_ptr<boost::asio::signal_set> signals;
-    HTTPConnection::MuxFunction muxFunction = [this](boost::beast::http::message<true, boost::beast::http::string_body> &&msg , HTTPConnection::WriteCallback callback){
+    HTTPConnection::MuxFunction muxFunction = [this](boost::beast::http::message<true, boost::beast::http::string_body> &&msg, HTTPConnection::WriteCallback callback) {
+        const auto method = msg.method();
+        const auto path = msg.target();
         std::shared_lock lock(mapMutex);
-
-
+        const Endpoint endpoint{method, path};
+        if (muxMap.contains(endpoint)) {
+            muxMap[endpoint](std::move(msg), callback);
+        } else {
+            callback(Responses::notFound(msg.version(), path));
+        }
     };
-    boost::asio::io_context ioc;
-    TcpListener<HTTPConnection> tcpListener;
 
+    TcpListener<HTTPConnection> tcpListener;
     std::shared_mutex mapMutex;
     MuxMap muxMap;
 
     std::vector<std::thread> threads;
     int threadsNumber = 1;
-    //bool serverIsRunning = false;
+    bool serverIsRunning = false;
 
 public:
     HTTPServer();
 
     error_code bindTo(std::string_view ipAddress, std::string_view port);
 
-    void setThreadNumber(int number){ threadsNumber = number;};
+    bool setThreadNumber(int number);
 
-    error_code runBlocking();
+    void runBlocking();
 
-    error_code stopOnSignals(const std::initializer_list<int>& sigList);
+    void runNonBlocking();
+
+    void stopNonBlocking();
+
+    bool isRunning() { return serverIsRunning; }
+
+    error_code stopBlockingOnSignals(const std::initializer_list<int> &sigList);
 
     bool setHandler(const Endpoint &endpoint, const HandlerFunc &handler);
 

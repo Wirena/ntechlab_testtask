@@ -26,23 +26,32 @@ HTTPServer::error_code HTTPServer::bindTo(std::string_view ipAddress, std::strin
     return err;
 }
 
-HTTPServer::error_code HTTPServer::runBlocking() {
+void HTTPServer::runBlocking() {
     threads.clear();
     threads.reserve(threadsNumber - 1);
     tcpListener.listen();
     for (auto i = 0; i <= threadsNumber - 1; ++i)
         threads.emplace_back([this] { ioc.run(); });
-
+    serverIsRunning = true;
     ioc.run();
-    for(auto& thread : threads) thread.join();
+    for (auto &thread : threads) thread.join();
+    serverIsRunning = false;
     error_code err;
     signals->cancel(err);
-    if(err)
+    if (err)
         fail(err, "Signal_set.cancel failed");
     signals->clear(err);
-    if(err)
+    if (err)
         fail(err, "Signal_set.clear failed");
-    return err;
+}
+
+void HTTPServer::runNonBlocking() {
+    threads.clear();
+    threads.reserve(threadsNumber);
+    tcpListener.listen();
+    serverIsRunning = true;
+    for (auto i = 0; i < threadsNumber; ++i)
+        threads.emplace_back([this] { ioc.run(); });
 }
 
 bool HTTPServer::setHandler(const Endpoint &endpoint, const HandlerFunc &handler) {
@@ -60,24 +69,36 @@ bool HTTPServer::setHandler(const Endpoint &endpoint, HandlerFunc &&handler) {
 }
 
 
-boost::system::error_code HTTPServer::stopOnSignals(const std::initializer_list<int>& sigList) {
-    if(!signals) {
+boost::system::error_code HTTPServer::stopBlockingOnSignals(const std::initializer_list<int> &sigList) {
+    if (!signals) {
         signals = std::make_unique<boost::asio::signal_set>(ioc);
     }
     error_code err;
     signals->clear(err);
-    if(err){
-        fail(err,"Failed to clear signal_set");
+    if (err) {
+        fail(err, "Failed to clear signal_set");
         return err;
     }
 
-    for(const int signal : sigList){
+    for (const int signal : sigList) {
         signals->add(signal, err);
-        if(err){
-            fail(err,"Failed to add signal");
+        if (err) {
+            fail(err, "Failed to add signal");
             return err;
         }
     }
     signals->async_wait(boost::bind(&boost::asio::io_service::stop, &ioc));
     return err;
+}
+
+bool HTTPServer::setThreadNumber(int number) {
+    if (number <= 1) return false;
+    threadsNumber = number;
+    return true;
+}
+
+void HTTPServer::stopNonBlocking() {
+    ioc.stop();
+    for (auto &thread : threads) thread.join();
+    serverIsRunning = false;
 }

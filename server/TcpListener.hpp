@@ -24,7 +24,6 @@ public:
     [[nodiscard]] error_code bind(const tcp::endpoint &endpoint);
     [[nodiscard]] error_code listen();
     [[nodiscard]] error_code close();
-    ~TcpListener() { std::cout << "Exiting" << std::endl; }
 };
 
 
@@ -56,7 +55,7 @@ void TcpListener<Connection>::onAccept(error_code err, tcp::socket socket) {
         fail(err, "Accept failed");
         return;
     } else {
-        std::make_shared<Connection>(std::move(socket),muxFunction)->connect();
+        std::make_shared<Connection>(std::move(socket), muxFunction)->connect();
     }
     accept();
 }

@@ -30,7 +30,7 @@ function install-boost() {
 }
 
 function install-libjpeg() {
-  LIBJPEG_URL="http://www.ijg.org/files/jpegsrc.v9d.tar.gz"
+  LIBJPEG_URL="http://www.ijg.org/files/jpegsrc.v9e.tar.gz"
   LIBJPEG_BUILD_DIR="libjpeg-build"
   LIBJPEG_LIB_DIR="libjpeg"
   HEADER_PATH=

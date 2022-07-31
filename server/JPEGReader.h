@@ -4,19 +4,14 @@
 
 
 class CorruptedJPEGException : public std::exception {
+    const std::string msg;
 public:
-    char *what() {
-        return "File does not look like JPEG image";
+    explicit CorruptedJPEGException(const std::string str) : msg(str) {}
+    const char *what() const noexcept override {
+        return msg.c_str();
     }
 };
 
-
-class SmallBufferException : public std::exception {
-public:
-    char *what() {
-        return "ReadScanline buffer is too small";
-    }
-};
 
 class JPEGReader : public JPEGBase {
     jpeg_decompress_struct decompressStruct{0};
@@ -28,7 +23,7 @@ public:
     JPEGReader(JPEGReader &&) = delete;
     JPEGReader(const char *jpegFileBuffer, uint64_t bufferLength);
     ~JPEGReader();
-
+    void finishDecompressing();
     void decompress();
     bool allScanLinesRead();
     bool readScanline(unsigned char *buf, uint64_t length);

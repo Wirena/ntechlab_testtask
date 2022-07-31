@@ -41,7 +41,7 @@ namespace std {
 }// namespace std
 
 
-using HandlerFunc = std::function<void(boost::beast::http::message<true, boost::beast::http::string_body> &&, HTTPConnection::WriteCallback)>;
+using HandlerFunc = std::function<void(boost::beast::http::message<true, boost::beast::http::vector_body<char>> &&, HTTPConnection::WriteCallback)>;
 using MuxMap = std::unordered_map<Endpoint, HandlerFunc>;
 
 
@@ -50,7 +50,7 @@ class HTTPServer {
     boost::asio::io_context ioc;
 
     std::unique_ptr<boost::asio::signal_set> signals;
-    HTTPConnection::MuxFunction muxFunction = [this](boost::beast::http::message<true, boost::beast::http::string_body> &&msg, HTTPConnection::WriteCallback callback) {
+    HTTPConnection::MuxFunction muxFunction = [this](boost::beast::http::message<true, boost::beast::http::vector_body<char>> &&msg, HTTPConnection::WriteCallback callback) {
         const auto method = msg.method();
         const auto path = msg.target();
         std::shared_lock lock(mapMutex);
@@ -58,7 +58,7 @@ class HTTPServer {
         if (muxMap.contains(endpoint)) {
             muxMap[endpoint](std::move(msg), callback);
         } else {
-            callback(Responses::notFound(msg.version(), path));
+            callback(Responses::notFound(msg.version(),msg.keep_alive(), path));
         }
     };
 

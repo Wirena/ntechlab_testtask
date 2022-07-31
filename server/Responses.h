@@ -6,9 +6,9 @@ class Responses {
     using Response = boost::beast::http::response<boost::beast::http::string_body>;
 
 public:
-    static Response badRequest(unsigned int version, boost::beast::string_view what);
-    static Response notFound(unsigned int version, boost::beast::string_view what);
-    static Response serverError(unsigned int version, boost::beast::string_view what);
+    static Response badRequest(unsigned int version, bool keepAlive, boost::beast::string_view what);
+    static Response notFound(unsigned int version, bool keepAlive, boost::beast::string_view what);
+    static Response serverError(unsigned int version, bool keepAlive, boost::beast::string_view what);
 };
 
 

@@ -29,14 +29,17 @@ HTTPServer::error_code HTTPServer::bindTo(std::string_view ipAddress, std::strin
 void HTTPServer::runBlocking() {
     threads.clear();
     threads.reserve(threadsNumber - 1);
-    tcpListener.listen();
+    auto err = tcpListener.listen();
+    if(err){
+        std::cerr<<"Failed to start the server"<<std::endl;
+        return;
+    }
     for (auto i = 0; i <= threadsNumber - 1; ++i)
         threads.emplace_back([this] { ioc.run(); });
     serverIsRunning = true;
     ioc.run();
     for (auto &thread : threads) thread.join();
     serverIsRunning = false;
-    error_code err;
     signals->cancel(err);
     if (err)
         fail(err, "Signal_set.cancel failed");
@@ -48,7 +51,11 @@ void HTTPServer::runBlocking() {
 void HTTPServer::runNonBlocking() {
     threads.clear();
     threads.reserve(threadsNumber);
-    tcpListener.listen();
+    const auto err = tcpListener.listen();
+    if(err){
+        std::cerr<<"Failed to start the server"<<std::endl;
+        return;
+    }
     serverIsRunning = true;
     for (auto i = 0; i < threadsNumber; ++i)
         threads.emplace_back([this] { ioc.run(); });

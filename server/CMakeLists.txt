@@ -7,7 +7,7 @@ set(LIBJPEG_INCLUDE_DIR ../third_party/libjpeg/include)
 set(LIBJPEG_STATIC_LIB_REL ../third_party/libjpeg/libjpeg.a)
 get_filename_component(LIBJPEG_STATIC_LIB_ABS ${LIBJPEG_STATIC_LIB_REL} ABSOLUTE)
 
-add_executable(${PROJECT_NAME} main.cpp TcpListener.hpp fail.h HTTPConnection.cpp HTTPConnection.h HTTPServer.cpp HTTPServer.h Responses.cpp Responses.h JPEG.cpp JPEG.h)
+add_executable(${PROJECT_NAME} main.cpp TcpListener.hpp fail.h HTTPConnection.cpp HTTPConnection.h HTTPServer.cpp HTTPServer.h Responses.cpp Responses.h JPEGBase.cpp JPEGBase.h JPEGReader.cpp JPEGReader.h JPEGWriter.cpp JPEGWriter.h)
 
 add_compile_definitions(BOOST_NO_EXCEPTIONS)
 

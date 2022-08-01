@@ -17,14 +17,16 @@ body {
 #left_image_container {
     width: 49vw;
     float: left;
-    padding-right: 5px;
+    padding: 5px;
+    text-align: center;
 }
 
 
 #right_image_container {
     width: 49vw;
     float: right;
-    padding-left: 5px;
+    padding: 5px;
+    text-align: center;
 }
 
 img{

@@ -150,7 +150,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    std::cout << "Starting server on " << ipAddress << ':' << port << " number of threads: " << threadsNumber <<std::endl;
+    std::cout << "Starting server on " << ipAddress << ':' << port <<std::endl<< "Number of threads: " << threadsNumber <<std::endl;
     HTTPServer httpServer;
 
     if (httpServer.bindTo(ipAddress, port)) {
@@ -163,19 +163,20 @@ int main(int argc, char *argv[]) {
     }
     httpServer.setThreadNumber(threadsNumber);
     if (interactive) {
-        const char url[]{"/interactive"};
+        const char url[]{"/interactive/"};
         const char directory[]{"../www/"};
         if (!httpServer.setHandler(url, true, FileServerHandler(directory, url))) {
             std::cerr << "Failed to set handler fileserver" << std::endl;
             return 1;
         }
-        std::cout << "Using interactive mode, visit page at " << ipAddress << ":" << port << url << std::endl;
+        std::cout << "Using interactive mode, visit page at " << url << std::endl;
     }
 
     if (!httpServer.setHandler("/mirror", false, imageMirrorHandler)) {
         std::cerr << "Failed to set handler for mirroring image" << std::endl;
         return 1;
     }
+    std::cout<<"Mirror image endpoint at /mirror/"<<std::endl;
 
 
     httpServer.runBlocking();

@@ -17,12 +17,12 @@ HTTPServer::error_code HTTPServer::bindTo(std::string_view ipAddress, std::strin
     unsigned short iPort;
     const auto res = std::from_chars(port.cbegin(), port.cend(), iPort);
     if (res.ec == std::errc::invalid_argument) {
-        fail(error_code(), "Failed to make address");
+        fail(error_code(EINVAL, boost::system::generic_category()), "Failed to make address");
         return error_code();
     }
 
     err = tcpListener.bind({address, iPort});
-    if (err) fail(error_code(), "Failed to bind address and start listening");
+    if (err) fail(err, "Failed to bind address and start listening");
     return err;
 }
 

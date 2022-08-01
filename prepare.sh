@@ -1,6 +1,11 @@
 #!/bin/bash
 LIBS_DIR="third_party"
 
+RED="$(tput setaf 1)"
+NORMAL="$(tput sgr0)"
+GREEN="$(tput setaf 2)"
+
+
 function print-error() {
   echo -e "${RED}$1${NORMAL}"
 }

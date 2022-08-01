@@ -10,7 +10,6 @@
 #include <vector>
 
 
-
 template<typename Handler>
 class MuxMap {
     struct PathNode {
@@ -20,6 +19,7 @@ class MuxMap {
         std::vector<std::shared_ptr<PathNode>> children;
         std::weak_ptr<PathNode> parent;
     };
+
 
     std::shared_ptr<PathNode> root = nullptr;
 
@@ -42,7 +42,7 @@ public:
     bool containsHandler(boost::string_view path);
 
     template<typename... Args>
-    bool callHandler(boost::string_view path, Args&&... args);
+    bool callHandler(boost::string_view path, Args &&... args);
     bool deleteHandler(boost::string_view path);
 };
 
@@ -68,7 +68,7 @@ bool MuxMap<Handler>::deleteHandler(boost::string_view path) {
 
 template<typename Handler>
 template<typename... Args>
-bool MuxMap<Handler>::callHandler(boost::string_view path, Args&&... args) {
+bool MuxMap<Handler>::callHandler(boost::string_view path, Args &&... args) {
     const auto node = findPathNode(path);
     if (!node) return false;
     if (!node->handler) return false;
@@ -85,6 +85,7 @@ bool MuxMap<Handler>::insertHandler(boost::string_view path, bool handleChildren
         node = createPathNode(path);
         if (!node) return false;
     }
+
     if (node->handler) return false;
     node->handleChildren = handleChildren;
     node->handler = std::forward<Arg>(handler);
@@ -114,6 +115,7 @@ std::shared_ptr<typename MuxMap<Handler>::PathNode> MuxMap<Handler>::findPathNod
     auto currentNode = root;
     for (int i = 1; i < tokens.size(); i++) {
         const auto &token = tokens[i];
+        bool nextNodeFound = false;
         if (currentNode->children.size() == 0)
             return nullptr;// node has no children, so no node found
         for (const auto &child : currentNode->children) {
@@ -124,11 +126,14 @@ std::shared_ptr<typename MuxMap<Handler>::PathNode> MuxMap<Handler>::findPathNod
                 // if node's name fits but id does handles children's requests,
                 // then check it's children
                 currentNode = child;
+                nextNodeFound = true;
                 break;
             }
-            // Dead end, none of currentNode's children fits our path
-            return nullptr;
         }
+        if(!nextNodeFound) // Dead end, none of currentNode's children fits our path
+            return nullptr;
+
+
     }
     // If we hit a dead end we would've exited earlier,
     // so since we are here, currentNode is the node we are looking for
@@ -154,11 +159,16 @@ std::vector<std::string> MuxMap<Handler>::splitPath(boost::string_view path) {
 
 template<typename Handler>
 std::shared_ptr<typename MuxMap<Handler>::PathNode> MuxMap<Handler>::createPathNode(boost::string_view path) {
-    if (!root)
+    if (!root) {
         root = std::make_shared<typename MuxMap<Handler>::PathNode>();
-    root->nodeName = "/";
+        root->nodeName = "/";
+        root->handleChildren = false;
+    }
+
     if (path.length() == 1 && path[0] == '/')
         return root;
+
+
     if (findPathNode(path)) return nullptr;
 
     const auto tokens = splitPath(path);

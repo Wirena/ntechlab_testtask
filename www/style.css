@@ -1,0 +1,33 @@
+body {
+    margin: 0px;
+    padding: 0px;
+}
+
+#button_container {
+    display: flex;
+    padding: 10px;
+    justify-content: space-around;
+    background-color: lightsteelblue;
+}
+
+.image_description {
+    text-align: center;
+}
+
+#left_image_container {
+    width: 49vw;
+    float: left;
+    padding-right: 5px;
+}
+
+
+#right_image_container {
+    width: 49vw;
+    float: right;
+    padding-left: 5px;
+}
+
+img{
+    max-width: 100%;
+    max-height: 85vh;
+}

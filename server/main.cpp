@@ -142,7 +142,7 @@ int main(int argc, char *argv[]) {
     std::string ipAddress{"0.0.0.0"};
     std::string port{"8080"};
     int threadsNumber = 1;
-    bool interactive = true, help = false;
+    bool interactive = false, help = false;
     if (!parseArguments(argc, argv, &threadsNumber, &ipAddress, &port, &help, &interactive))
         return 1;
     if (help) {

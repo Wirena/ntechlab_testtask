@@ -1,3 +1,4 @@
+#include "FileServerHandler.h"
 #include "HTTPServer.h"
 #include "JPEGReader.h"
 #include "JPEGWriter.h"
@@ -12,7 +13,6 @@
 #include <limits>
 #include <vector>
 
-void printHelp(){};
 
 using tcp = boost::asio::ip::tcp;
 using error_code = boost::system::error_code;
@@ -90,18 +90,30 @@ const auto imageMirrorHandler = [](boost::beast::http::message<true, boost::beas
 };
 
 
+void printHelp() {
+    std::cout << "Options:" << std::endl
+              << "-j arg - set number of threads" << std::endl
+              << "-p arg - set port number" << std::endl
+              << "-b arg - set ipv4 address" << std::endl
+              << "-i     - interactive mode" << std::endl
+              << "-h     - display help" << std::endl;
+};
 
-bool parseArguments(int argc, char *argv[], int *threadsNumber, std::string *ip, std::string *port, bool* help, bool* interactive) {
+
+bool parseArguments(int argc, char *argv[], int *threadsNumber, std::string *ip, std::string *port, bool *help, bool *interactive) {
     int c;
     char *endPtr;
     long argNumber;
-    while ((c = getopt(argc, argv, "hi:p:j:")) != -1)
+    while ((c = getopt(argc, argv, "hib:p:j:")) != -1)
         switch (c) {
-            case 'i':
+            case 'b':
                 *ip = optarg;
                 break;
             case 'p':
                 *port = optarg;
+                break;
+            case 'i':
+                *interactive = true;
                 break;
             case 'j':
                 argNumber = std::strtol(optarg, &endPtr, 10);
@@ -113,7 +125,8 @@ bool parseArguments(int argc, char *argv[], int *threadsNumber, std::string *ip,
                 *threadsNumber = static_cast<int>(argNumber);
                 break;
             case 'h':
-                *help=true;
+                *help = true;
+                break;
             case '?':
                 std::cerr << "Invalid option " << static_cast<char>(optopt) << std::endl;
                 return false;
@@ -129,30 +142,42 @@ int main(int argc, char *argv[]) {
     std::string ipAddress{"127.0.0.1"};
     std::string port{"8080"};
     int threadsNumber = 1;
-    bool interactive = false, help=false;
-    if (!parseArguments(argc, argv, &threadsNumber, &ipAddress, &port, &help, & interactive))
+    bool interactive = false, help = false;
+    if (!parseArguments(argc, argv, &threadsNumber, &ipAddress, &port, &help, &interactive))
         return 1;
-    if(help){
+    if (help) {
         printHelp();
         return 1;
     }
 
-    std::cout << "Starting server on " << ipAddress << ':' << port << " using " << threadsNumber << " threads" << std::endl;
+    std::cout << "Starting server on " << ipAddress << ':' << port << " number of threads: " << threadsNumber <<std::endl;
     HTTPServer httpServer;
 
-    if(httpServer.bindTo(ipAddress, port)) {
-        std::cerr<<"Failed to bind"<<std::endl;
+    if (httpServer.bindTo(ipAddress, port)) {
+        std::cerr << "Failed to bind" << std::endl;
         return 1;
     }
-    if(httpServer.stopBlockingOnSignals({SIGINT, SIGTERM})){
-        std::cerr<<"Failed to set signal handler"<<std::endl;
+    if (httpServer.stopBlockingOnSignals({SIGINT, SIGTERM})) {
+        std::cerr << "Failed to set signal handler" << std::endl;
         return 1;
     }
     httpServer.setThreadNumber(threadsNumber);
-    if(!httpServer.setHandler("/mirror", false, imageMirrorHandler)){
-        std::cerr<<"Failed to set handler for mirroring image"<<std::endl;
+    if (interactive) {
+        const char url[]{"/interactive"};
+        const char directory[]{"../www/"};
+        if (!httpServer.setHandler(url, true, FileServerHandler(directory, url))) {
+            std::cerr << "Failed to set handler fileserver" << std::endl;
+            return 1;
+        }
+        std::cout << "Using interactive mode, visit page at " << ipAddress << ":" << port << url << std::endl;
+    }
+
+    if (!httpServer.setHandler("/mirror", false, imageMirrorHandler)) {
+        std::cerr << "Failed to set handler for mirroring image" << std::endl;
         return 1;
     }
+
+
     httpServer.runBlocking();
     return 0;
 }

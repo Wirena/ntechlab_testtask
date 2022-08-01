@@ -3,13 +3,9 @@
 #include "JPEGBase.h"
 
 
-class CorruptedJPEGException : public std::exception {
-    const std::string msg;
+class CorruptedJPEGException : public std::runtime_error {
 public:
-    explicit CorruptedJPEGException(const std::string str) : msg(str) {}
-    const char *what() const noexcept override {
-        return msg.c_str();
-    }
+    explicit CorruptedJPEGException(int err) : runtime_error("CorruptedJPEGException: Failed to open image. Error code: " + std::to_string(err)) {}
 };
 
 

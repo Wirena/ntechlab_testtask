@@ -11,7 +11,7 @@ JPEGReader::JPEGReader(const char *jpegFileBuffer, uint64_t bufferLength) : jpeg
 void JPEGReader::decompress() {
     jpeg_mem_src(&decompressStruct, reinterpret_cast<const unsigned char *>(jpegFileBuffer), bufferLength);
     auto err = jpeg_read_header(&decompressStruct, TRUE);
-    if (err != JPEG_HEADER_OK) throw CorruptedJPEGException("CorruptedJPEGException: Failed to open image");
+    if (err != JPEG_HEADER_OK) throw CorruptedJPEGException(err);
     jpeg_start_decompress(&decompressStruct);
     imageInfo.width = decompressStruct.output_width;
     imageInfo.height = decompressStruct.output_height;

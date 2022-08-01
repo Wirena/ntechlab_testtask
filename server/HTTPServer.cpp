@@ -30,8 +30,8 @@ void HTTPServer::runBlocking() {
     threads.clear();
     threads.reserve(threadsNumber - 1);
     auto err = tcpListener.listen();
-    if(err){
-        std::cerr<<"Failed to start the server"<<std::endl;
+    if (err) {
+        std::cerr << "Failed to start the server" << std::endl;
         return;
     }
     for (auto i = 0; i <= threadsNumber - 1; ++i)
@@ -52,8 +52,8 @@ void HTTPServer::runNonBlocking() {
     threads.clear();
     threads.reserve(threadsNumber);
     const auto err = tcpListener.listen();
-    if(err){
-        std::cerr<<"Failed to start the server"<<std::endl;
+    if (err) {
+        std::cerr << "Failed to start the server" << std::endl;
         return;
     }
     serverIsRunning = true;
@@ -61,17 +61,17 @@ void HTTPServer::runNonBlocking() {
         threads.emplace_back([this] { ioc.run(); });
 }
 
-bool HTTPServer::setHandler(const Endpoint &endpoint, const HandlerFunc &handler) {
+bool HTTPServer::setHandler(boost::string_view path, bool handleChildren, const HandlerFunc &handler) {
     std::unique_lock lock(mapMutex);
-    if (muxMap.contains(endpoint)) return false;
-    muxMap.emplace(std::pair{endpoint, handler});
+    if (muxMap.containsHandler(path)) return false;
+    muxMap.insertHandler(path, handleChildren, handler);
     return true;
 }
 
-bool HTTPServer::setHandler(const Endpoint &endpoint, HandlerFunc &&handler) {
+bool HTTPServer::setHandler(boost::string_view path, bool handleChildren, HandlerFunc &&handler) {
     std::unique_lock lock(mapMutex);
-    if (muxMap.contains(endpoint)) return false;
-    muxMap.emplace(std::pair{endpoint, std::move(handler)});
+    if (muxMap.containsHandler(path)) return false;
+    muxMap.insertHandler(path, handleChildren, std::move(handler));
     return true;
 }
 
@@ -108,4 +108,9 @@ void HTTPServer::stopNonBlocking() {
     ioc.stop();
     for (auto &thread : threads) thread.join();
     serverIsRunning = false;
+}
+
+bool HTTPServer::deleteHandler(boost::string_view path) {
+    std::unique_lock lock(mapMutex);
+    return muxMap.deleteHandler(path);
 }

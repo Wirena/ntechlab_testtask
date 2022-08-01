@@ -1,8 +1,16 @@
 #include "HTTPServer.h"
+#include "JPEGReader.h"
+#include "JPEGWriter.h"
+#include "MuxMap.hpp"
+#include "Responses.h"
+#include <algorithm>
+#include <cassert>
 #include <cstdlib>
+#include <cstring>
 #include <getopt.h>
 #include <iostream>
 #include <limits>
+#include <vector>
 
 void printHelp(){};
 
@@ -11,28 +19,79 @@ using error_code = boost::system::error_code;
 
 // These functions have to be defined by user if BOOST_NO_EXCEPTIONS is defined
 void boost::throw_exception(std::exception const &e) {
-    std::cerr << "Aborting" << std::endl;
-    abort();
-}
-void boost::throw_exception(std::exception const &, boost::source_location const &) {
-    std::cerr << "Aborting" << std::endl;
+    std::cerr << "Aborting " << e.what() << std::endl;
     abort();
 }
 
+void boost::throw_exception(std::exception const &e, boost::source_location const &) {
+    std::cerr << "Aborting " << e.what() << std::endl;
+    abort();
+}
 
+void mirrorScanline(std::vector<unsigned char> *vector, int pixelSize) {
+    std::vector<unsigned char> buf(pixelSize, 0);
+    for (unsigned i = 0; i < vector->size() / 2; i += pixelSize) {
+        std::copy(vector->begin() + i, vector->begin() + i + pixelSize, buf.begin());
+        std::copy(vector->end() - i - pixelSize, vector->end() - i, vector->begin() + i);
+        std::copy(buf.begin(), buf.end(), vector->end() - i - pixelSize);
+    }
+}
 
-const auto handler = [](boost::beast::http::message<true, boost::beast::http::vector_body<char>> &&msg, HTTPConnection::WriteCallback callback) {
+std::vector<unsigned char> mirrorImage(const std::vector<char> &fileIn) {
+    JPEGReader reader(fileIn.data(), fileIn.size());
+    JPEGWriter writer;
+    reader.decompress();
+    const auto imageInfo = reader.getImageInfo();
+    writer.setImageInfo(imageInfo);
+    writer.setQuality(100);
+    writer.prepareForWrite();
+    std::vector<unsigned char> scanline;
+    scanline.resize(imageInfo.width * imageInfo.pixelSize);
+    while (reader.readScanline(scanline.data(), scanline.size())) {
+        mirrorScanline(&scanline, imageInfo.pixelSize);
+        writer.writeScanline(scanline.data(), scanline.size());
+    }
+    writer.finishCompressing();
+    reader.finishDecompressing();
+    assert(writer.allScanlinesWritten() && reader.allScanLinesRead());
+    const auto [ptr, len] = writer.releaseFileBuffer();
+    std::vector<unsigned char> file;
+    file.resize(len);
+    std::copy(ptr.get(), ptr.get() + len, file.begin());
+    return file;
+}
+
+const auto imageMirrorHandler = [](boost::beast::http::message<true, boost::beast::http::vector_body<char>> &&msg, HTTPConnection::WriteCallback callback) {
     namespace http = boost::beast::http;
+    if (msg.method() != http::verb::post) {
+        callback(Responses::badRequest(msg.version(), msg.keep_alive(), "Use POST method to mirror image"));
+        return;
+    }
+    std::vector<unsigned char> responseBody;
+    try {
+        responseBody = mirrorImage(msg.body());
+    } catch (const SmallBufferException &e) {
+        callback(Responses::serverError(msg.version(), msg.keep_alive(), e.what()));
+        return;
+    } catch (const std::runtime_error &e) {
+        callback(Responses::badRequest(msg.version(), msg.keep_alive(), e.what()));
+        return;
+    } catch (const std::exception &e) {
+        callback(Responses::serverError(msg.version(), msg.keep_alive(), "Something went wrong while parsing image"));
+        return;
+    }
     http::response<http::vector_body<unsigned char>> res{http::status::ok, msg.version()};
     res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-    res.set(http::field::content_type, "text/html");
+    res.set(http::field::content_type, "application/octet-stream");
     res.keep_alive(msg.keep_alive());
-    res.body() = {'1','g',':',')'};
+    res.body() = std::move(responseBody);
     res.prepare_payload();
     callback(std::move(res));
 };
 
-bool parseArguments(int argc, char *argv[], int *threadsNumber, std::string *ip, std::string *port) {
+
+
+bool parseArguments(int argc, char *argv[], int *threadsNumber, std::string *ip, std::string *port, bool* help, bool* interactive) {
     int c;
     char *endPtr;
     long argNumber;
@@ -54,8 +113,7 @@ bool parseArguments(int argc, char *argv[], int *threadsNumber, std::string *ip,
                 *threadsNumber = static_cast<int>(argNumber);
                 break;
             case 'h':
-                printHelp();
-                exit(1);
+                *help=true;
             case '?':
                 std::cerr << "Invalid option " << static_cast<char>(optopt) << std::endl;
                 return false;
@@ -69,17 +127,32 @@ bool parseArguments(int argc, char *argv[], int *threadsNumber, std::string *ip,
 
 int main(int argc, char *argv[]) {
     std::string ipAddress{"127.0.0.1"};
-    std::string port{"8088"};
+    std::string port{"8080"};
     int threadsNumber = 1;
-    if (!parseArguments(argc, argv, &threadsNumber, &ipAddress, &port))
+    bool interactive = false, help=false;
+    if (!parseArguments(argc, argv, &threadsNumber, &ipAddress, &port, &help, & interactive))
         return 1;
+    if(help){
+        printHelp();
+        return 1;
+    }
+
     std::cout << "Starting server on " << ipAddress << ':' << port << " using " << threadsNumber << " threads" << std::endl;
     HTTPServer httpServer;
-    httpServer.bindTo(ipAddress, port);
-    httpServer.stopBlockingOnSignals({SIGINT, SIGTERM});
+
+    if(httpServer.bindTo(ipAddress, port)) {
+        std::cerr<<"Failed to bind"<<std::endl;
+        return 1;
+    }
+    if(httpServer.stopBlockingOnSignals({SIGINT, SIGTERM})){
+        std::cerr<<"Failed to set signal handler"<<std::endl;
+        return 1;
+    }
     httpServer.setThreadNumber(threadsNumber);
-    httpServer.setHandler({"POST", "/"}, handler);
-    httpServer.setHandler({"GET", "/"}, handler);
+    if(!httpServer.setHandler("/mirror", false, imageMirrorHandler)){
+        std::cerr<<"Failed to set handler for mirroring image"<<std::endl;
+        return 1;
+    }
     httpServer.runBlocking();
     return 0;
 }

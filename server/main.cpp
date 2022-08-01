@@ -139,10 +139,10 @@ bool parseArguments(int argc, char *argv[], int *threadsNumber, std::string *ip,
 
 
 int main(int argc, char *argv[]) {
-    std::string ipAddress{"127.0.0.1"};
+    std::string ipAddress{"0.0.0.0"};
     std::string port{"8080"};
     int threadsNumber = 1;
-    bool interactive = false, help = false;
+    bool interactive = true, help = false;
     if (!parseArguments(argc, argv, &threadsNumber, &ipAddress, &port, &help, &interactive))
         return 1;
     if (help) {
@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
     }
     httpServer.setThreadNumber(threadsNumber);
     if (interactive) {
-        const char url[]{"/interactive/"};
+        const char url[]{"/interactive"};
         const char directory[]{"../www/"};
         if (!httpServer.setHandler(url, true, FileServerHandler(directory, url))) {
             std::cerr << "Failed to set handler fileserver" << std::endl;
@@ -176,7 +176,7 @@ int main(int argc, char *argv[]) {
         std::cerr << "Failed to set handler for mirroring image" << std::endl;
         return 1;
     }
-    std::cout<<"Mirror image endpoint at /mirror/"<<std::endl;
+    std::cout<<"Mirror image endpoint at /mirror"<<std::endl;
 
 
     httpServer.runBlocking();

@@ -29,7 +29,7 @@ void HTTPConnection::read() {
 void HTTPConnection::onRead(error_code err, std::size_t bytesTransferred) {
     if (err == http::error::end_of_stream)
         return close();
-    if (err) return fail(err, "Async_read failed");
+    if (err) return ;
     if (parser.chunked() || !parser.is_done()) {
         writeCallback(Responses::serverError(parser.get().version(), false, "Chunked requests are not supported"));
         return close();
@@ -44,7 +44,7 @@ void HTTPConnection::close() {
 
 void HTTPConnection::onWrite(bool close, boost::system::error_code err, std::size_t bytesTransferred) {
     if (err)
-        return fail(err, "Write Failed");
+        return;
     if (close) return this->close();
     res = nullptr;
     read();

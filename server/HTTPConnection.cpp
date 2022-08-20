@@ -29,7 +29,7 @@ void HTTPConnection::read() {
 void HTTPConnection::onRead(error_code err, std::size_t bytesTransferred) {
     if (err == http::error::end_of_stream)
         return close();
-    if (err) return ;
+    if (err || !bytesTransferred) return;
     if (parser.chunked() || !parser.is_done()) {
         writeCallback(Responses::serverError(parser.get().version(), false, "Chunked requests are not supported"));
         return close();

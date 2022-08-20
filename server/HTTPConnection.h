@@ -46,7 +46,7 @@ public:
         parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
     }
     void connect();
-
+    ~HTTPConnection(){close();}
 private:
     MuxFunction muxFunction;
 };
